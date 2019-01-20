@@ -59,7 +59,7 @@ aciconfig = AciWebservice.deploy_configuration(cpu_cores=1,
 print("Configuring Image")
 
 # Add model name to scorefile
-with open("deploy/scoreSparkTemplate.py") as fr:
+with open("project/deploy/scoreSparkTemplate.py") as fr:
     score = fr.read()
 
 score = score.replace("{model_name}", model_name)
