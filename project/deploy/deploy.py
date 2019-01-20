@@ -40,6 +40,14 @@ import os
 #os.stat('./medium_model3.mml')
 #print("Downloaded Model File")
 
+#delete old service first before new one
+try:
+    oldservice = Webservice(workspace=ws, name=service_name)
+    print("delete " + service_name + " before creating new one")
+    oldservice.delete()
+except:
+    print(service_name + " does not exist, create new one")
+
 print("Writing Conda File")
 myenv = CondaDependencies()
 myenv.add_conda_package("scikit-learn")
@@ -59,7 +67,7 @@ aciconfig = AciWebservice.deploy_configuration(cpu_cores=1,
 print("Configuring Image")
 
 # Add model name to scorefile
-with open("project/deploy/scoreSparkTemplate.py") as fr:
+with open("scoreSparkTemplate.py") as fr:
     score = fr.read()
 
 score = score.replace("{model_name}", model_name)
