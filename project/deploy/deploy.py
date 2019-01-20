@@ -64,7 +64,7 @@ with open("deploy/scoreSparkTemplate.py") as fr:
 
 score = score.replace("{model_name}", model_name)
 
-with open("deploy/scoreSpark.py", "w") as fw:
+with open("scoreSpark.py", "w") as fw:
     fw.write(score)
 
 # configure the image
