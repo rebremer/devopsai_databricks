@@ -1,0 +1,6 @@
+{
+    "subscription_id": "<Enter Your Azure Subscription Id here>",
+    "resource_group": "<Name of the resource group you created the aml service workspace>",
+    "workspace_name": "<Name of your workspace inside aml service>",
+    "location": "<Location of aml service>"
+}
