@@ -98,36 +98,38 @@ data_all.printSchema()
 
 # COMMAND ----------
 
-categoricalColumns = ["workclass", "education", "marital_status", "occupation", "relationship", "race", "sex", "native_country"]
-stages = [] # stages in our Pipeline
-for categoricalCol in categoricalColumns:
-    # Category Indexing with StringIndexer
-    stringIndexer = StringIndexer(inputCol=categoricalCol, outputCol=categoricalCol + "Index")
-    # Use OneHotEncoder to convert categorical variables into binary SparseVectors
-    # encoder = OneHotEncoderEstimator(inputCol=categoricalCol + "Index", outputCol=categoricalCol + "classVec")
-    encoder = OneHotEncoderEstimator(inputCols=[stringIndexer.getOutputCol()], outputCols=[categoricalCol + "classVec"])
-    # Add stages.  These are not run here, but will run all at once later on.
-    stages += [stringIndexer, encoder]
-    
-    
-# Convert label into label indices using the StringIndexer
-label_stringIdx = StringIndexer(inputCol="income", outputCol="label")
-stages += [label_stringIdx]
+(trainingData, testData) = data_all.randomSplit([0.7, 0.3], seed=122423)
 
-# Transform all features into a vector using VectorAssembler
-numericCols = ["age", "fnlwgt", "education_num", "capital_gain", "capital_loss", "hours_per_week"]
-assemblerInputs = [c + "classVec" for c in categoricalColumns] + numericCols
-assembler = VectorAssembler(inputCols=assemblerInputs, outputCol="features")
-stages += [assembler]
+# COMMAND ----------
 
-partialPipeline = Pipeline().setStages(stages)
-pipelineModel = partialPipeline.fit(data_all)
-preppedDataDF = pipelineModel.transform(data_all)
+label = "income"
+dtypes = dict(trainingData.dtypes)
+dtypes.pop(label)
 
-selectedcols = ["label", "features"] + ["income"] + categoricalColumns + numericCols
-dataset = preppedDataDF.select(selectedcols)
+si_xvars = []
+ohe_xvars = []
+featureCols = []
+for idx,key in enumerate(dtypes):
+    if dtypes[key] == "string":
+        featureCol = "-".join([key, "encoded"])
+        featureCols.append(featureCol)
+        
+        tmpCol = "-".join([key, "tmp"])
+        # string-index and one-hot encode the string column
+        #https://spark.apache.org/docs/2.3.0/api/java/org/apache/spark/ml/feature/StringIndexer.html
+        #handleInvalid: Param for how to handle invalid data (unseen labels or NULL values). 
+        #Options are 'skip' (filter out rows with invalid data), 'error' (throw an error), 
+        #or 'keep' (put invalid data in a special additional bucket, at index numLabels). Default: "error"
+        si_xvars.append(StringIndexer(inputCol=key, outputCol=tmpCol, handleInvalid="skip"))
+        ohe_xvars.append(OneHotEncoder(inputCol=tmpCol, outputCol=featureCol))
+    else:
+        featureCols.append(key)
 
-(trainingData, testData) = dataset.randomSplit([0.7, 0.3], seed=122423)
+# string-index the label column into a column named "label"
+si_label = StringIndexer(inputCol=label, outputCol='label')
+
+# assemble the encoded feature columns in to a column named "features"
+assembler = VectorAssembler(inputCols=featureCols, outputCol="features")
 
 # COMMAND ----------
 
@@ -152,10 +154,12 @@ with root_run.child_run("reg-" + str(reg)) as run:
     lr = LogisticRegression(regParam=reg)
         
     # put together the pipeline
-    pipe = Pipeline(stages=[lr])
+    pipe = Pipeline(stages=[*si_xvars, *ohe_xvars, si_label, assembler, lr])
 
     # train the model
     model_pipeline = pipe.fit(trainingData)
+        
+    # make prediction
     predictions = model_pipeline.transform(testData)
 
     # evaluate. note only 2 metrics are supported out of the box by Spark ML.
@@ -215,3 +219,7 @@ mymodel = Model.register(model_path = "/dbfs/" + par_model_name, # this points t
                        description = "testrbdbr",
                        workspace = ws)
 print(mymodel.name, mymodel.id, mymodel.version, sep = '\t')
+
+# COMMAND ----------
+
+
