@@ -17,7 +17,6 @@
 # MAGIC 5. Logistic regression - prevent overfitting (regularization)
 # MAGIC 6. Decision tree - different algorithm
 # MAGIC 
-# MAGIC The compact version of this notebook can be found in the same folder as 2_IncomeNotebookAMLS.py, in which only step 1 and step 7 are executed.
 
 # COMMAND ----------
 

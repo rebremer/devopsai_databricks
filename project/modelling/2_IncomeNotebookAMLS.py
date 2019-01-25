@@ -13,7 +13,6 @@
 # MAGIC 1. Initialize Azure Machine Learning Service
 # MAGIC 2. Add model to Azure Machine Learning Service
 # MAGIC 
-# MAGIC The extensive version of this notebook can be found in the same folder as 1_IncomeNotebookExploration.py, in which only step 1 and step 7 are executed.
 
 # COMMAND ----------
 
