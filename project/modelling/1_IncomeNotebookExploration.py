@@ -16,8 +16,6 @@
 # MAGIC 4. Logistic Regression - all features (hours of work, age, state, etc)
 # MAGIC 5. Logistic regression - prevent overfitting (regularization)
 # MAGIC 6. Decision tree - different algorithm
-# MAGIC 7. Initialize Azure Machine Learning Service
-# MAGIC 8. Add model to Azure Machine Learning Service
 # MAGIC 
 # MAGIC The compact version of this notebook can be found in the same folder as 2_IncomeNotebookAMLS.py, in which only step 1 and step 7 are executed.
 
