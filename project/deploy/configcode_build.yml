@@ -1,0 +1,53 @@
+resources:
+- repo: self
+queue:
+  name: Hosted VS2017
+steps:
+- task: CondaEnvironment@1
+  displayName: 'Create_custom_environment'
+  inputs:
+    createCustomEnvironment: true
+
+    environmentName: 'Create_custom_environment'
+
+    packageSpecs: 'python=3.6'
+
+    updateConda: false
+
+
+- task: Bash@3
+  displayName: 'Install dependencies'
+  inputs:
+    targetType: 'filePath'
+
+    filePath: setup/setup.sh
+
+    workingDirectory: setup
+
+
+- task: PythonScript@0
+  displayName: 'Prep Databricks'
+  inputs:
+    scriptPath: project/dataprep/prepDatabricks.py
+
+    workingDirectory: project/dataprep
+
+
+- task: PythonScript@0
+  displayName: 'Run build'
+  inputs:
+    scriptPath: project/services/triggerDatabricks.py
+
+    workingDirectory: project/services
+
+
+- task: CopyFiles@2
+  displayName: 'Copy Files to: $(Build.ArtifactStagingDirectory)'
+  inputs:
+    SourceFolder: '$(Build.SourcesDirectory)'
+
+    TargetFolder: '$(Build.ArtifactStagingDirectory)'
+
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact: drop'
