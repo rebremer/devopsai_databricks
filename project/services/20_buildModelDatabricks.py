@@ -3,7 +3,9 @@ import time
 
 def trigger_training_job(script_folder, notebook):
 
-    # Define Vars < Change the vars>
+    # Define Vars < Change the vars>. 
+    # In a production situation, don't put secrets in source code, but as secret variables, 
+    # see https://docs.microsoft.com/en-us/azure/devops/pipelines/process/variables?view=azure-devops&tabs=yaml%2Cbatch#secret-variables
     tenant_id="<Enter Your Tenant Id>"
     app_id="<Application Id of the SPN you Create>"
     app_key= "<Key for the SPN>"
@@ -21,6 +23,9 @@ def trigger_training_job(script_folder, notebook):
     #
     # Step 1: Create job and attach it to cluster
     #
+    # In this steps, secret are added as parameters (spn_tenant, spn_clientid, spn_clientsecret)
+    # Never do this in a production situation, but use secret scope backed by key vault instead
+    # See https://docs.azuredatabricks.net/user-guide/secrets/secret-scopes.html#azure-key-vault-backed-scopes
     response = requests.post(
         'https://%s/api/2.0/jobs/create' % domain,
         headers={'Authorization': b"Bearer " + DBR_PAT_TOKEN},
@@ -109,7 +114,7 @@ def trigger_training_job(script_folder, notebook):
             time.sleep(30) # wait 30 seconds before next status update
 
 def main():
-    script_folder = "../modelling"
+    script_folder = "modelling"
     notebook = "/trainDBrNotebook"
     trigger_training_job(script_folder, notebook)
 

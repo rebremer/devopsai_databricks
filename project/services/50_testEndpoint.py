@@ -9,7 +9,9 @@ from azureml.core.authentication import ServicePrincipalAuthentication
 from azureml.core import Workspace, Run
 from azureml.core.webservice import Webservice
 
-# Define Vars < Change the vars>
+# Define Vars < Change the vars>. 
+# In a production situation, don't put secrets in source code, but as secret variables, 
+# see https://docs.microsoft.com/en-us/azure/devops/pipelines/process/variables?view=azure-devops&tabs=yaml%2Cbatch#secret-variables
 tenant_id="<Enter Your Tenant Id>"
 app_id="<Application Id of the SPN you Create>"
 app_key= "<Key for the SPN>"
@@ -34,7 +36,10 @@ print(ws.name, ws._workspace_name, ws.resource_group, ws.location, sep = '\t')
 service=Webservice(name = service_name, workspace =ws)
 
 # Input for Model with all features
+
+#input_j = [{"hours_per_week":1, "income":"<=50K"}, {"hours_per_week":1, "income":"<=50K"}, {"hours_per_week":1, "income":"<=50K"}, {"hours_per_week":1, "income":"<=50K"}, {"hours_per_week":1, "income":"<=50K"}]
 input_j = [{"age":39,"workclass":"State-gov","fnlwgt":77516,"education":"Bachelors","education_num":13,"marital_status":"Never-married","occupation":"Adm-clerical","relationship":"Not-in-family","sex":"Male","capital_gain":23174,"capital_loss":0,"hours_per_week":40,"native_country":"United-States","race":"White"},{"age":50,"workclass":"Self-emp-not-inc","fnlwgt":83311,"education":"Bachelors","education_num":13,"marital_status":"Married-civ-spouse","occupation":"Exec-managerial","relationship":"Husband","sex":"Male","capital_gain":0,"capital_loss":0,"hours_per_week":13,"native_country":"United-States","race":"White"},{"age":38,"workclass":"Private","fnlwgt":215646,"education":"HS-grad","education_num":9,"marital_status":"Divorced","occupation":"Handlers-cleaners","relationship":"Not-in-family","sex":"Male","capital_gain":0,"capital_loss":0,"hours_per_week":40,"native_country":"United-States","race":"White"}]
+
 test_sample = json.dumps(input_j)
 print(test_sample)
 try:

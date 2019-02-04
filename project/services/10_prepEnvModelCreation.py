@@ -7,6 +7,9 @@ import requests
 
 def trigger_data_prep():
 
+    # Define Vars < Change the vars>. 
+    # In a production situation, don't put secrets in source code, but as secret variables, 
+    # see https://docs.microsoft.com/en-us/azure/devops/pipelines/process/variables?view=azure-devops&tabs=yaml%2Cbatch#secret-variables
     tenant_id="<Enter Your Tenant Id>"
     app_id="<Application Id of the SPN you Create>"
     app_key= "<Key for the SPN>"
@@ -52,7 +55,7 @@ def trigger_data_prep():
 def upload_notebook(domain, DBR_PAT_TOKEN, notebook):
     # Upload notebook to Databricks
     print("Upload notebook to Databricks DBFS")
-    with open("../modelling/" + notebook) as f:
+    with open("modelling/" + notebook) as f:
         notebookContent = f.read()
 
     # Encode notebook to base64

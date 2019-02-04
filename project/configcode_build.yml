@@ -14,7 +14,6 @@ steps:
 
     updateConda: false
 
-
 - task: Bash@3
   displayName: 'Install dependencies'
   inputs:
@@ -22,24 +21,23 @@ steps:
 
     filePath: setup/setup.sh
 
-    workingDirectory: setup
-
+- task: PythonScript@0
+  displayName: 'Prep Environment for model creation'
+  inputs:
+    scriptPath: project/services/10_prepEnvModelCreation.py
+    workingDirectory: project
 
 - task: PythonScript@0
-  displayName: 'Prep Databricks'
+  displayName: 'Build model using Databricks'
   inputs:
-    scriptPath: project/dataprep/prepDatabricks.py
-
-    workingDirectory: project/dataprep
-
+    scriptPath: project/services/20_buildModelDatabricks.py
+    workingDirectory: project
 
 - task: PythonScript@0
-  displayName: 'Run build'
+  displayName: 'Create image from model'
   inputs:
-    scriptPath: project/services/triggerDatabricks.py
-
-    workingDirectory: project/services
-
+    scriptPath: project/services/30_createImageFromModel.py
+    workingDirectory: project
 
 - task: CopyFiles@2
   displayName: 'Copy Files to: $(Build.ArtifactStagingDirectory)'
