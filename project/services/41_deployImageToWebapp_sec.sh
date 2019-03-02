@@ -1,6 +1,4 @@
 #!/bin/bash
-#install jq
-sudo apt-get install jq
 #variables
 webapp=$1
 registry=$2
