@@ -1,5 +1,8 @@
 #!/bin/bash
 #variables
+# $1=webapp
+# $2=registry name
+# $3=resource group
 image=$(echo $(cat conf/image.json) | jq -r '.image_name'):$(echo $(cat conf/image.json) | jq -r '.image_version')
 password=$(echo $(az acr credential show -n $2 --query passwords[0].value)  | tr -d '"')
 #update webapp with container
