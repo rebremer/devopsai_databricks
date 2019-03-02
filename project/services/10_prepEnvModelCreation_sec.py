@@ -3,7 +3,7 @@ import azureml.core
 from azureml.core import Workspace
 from azureml.core import Experiment
 import base64
-from azureml.core.authentication import ServicePrincipalAuthentication
+from azureml.core.authentication import AzureCliAuthentication
 import requests
 
 def trigger_data_prep():
@@ -23,9 +23,13 @@ def trigger_data_prep():
     print("Azure ML SDK Version: ", azureml.core.VERSION)
 
     # Point file to conf directory containing details for the aml service
+
+    cli_auth = AzureCliAuthentication()
+
     ws = Workspace(workspace_name = workspace,
                    subscription_id = subscription_id,
-                   resource_group = resource_grp)
+                   resource_group = resource_grp,
+                   auth=cli_auth)
 
     # Create a new experiment
     print("Starting to create new experiment")

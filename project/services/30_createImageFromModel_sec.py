@@ -4,7 +4,7 @@ import shutil
 import azureml
 from azureml.core import Workspace, Run
 from azureml.core.conda_dependencies import CondaDependencies 
-from azureml.core.authentication import ServicePrincipalAuthentication
+from azureml.core.authentication import AzureCliAuthentication
 from azureml.core.image import ContainerImage, Image
 from azureml.core.model import Model
 
@@ -33,9 +33,12 @@ model_version = config["model_version"]
 
 # Start creating 
 # Point file to conf directory containing details for the aml service
+cli_auth = AzureCliAuthentication()
+
 ws = Workspace(workspace_name = workspace,
                subscription_id = subscription_id,
-               resource_group = resource_grp)
+               resource_group = resource_grp,
+               auth=cli_auth)
 
 model_list = Model.list(workspace=ws)
 model, = (m for m in model_list if m.version == model_version and m.name == model_name)

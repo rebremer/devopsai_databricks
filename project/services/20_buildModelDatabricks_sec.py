@@ -7,7 +7,7 @@ import azureml.core
 import shutil
 import os, json
 from azureml.core import Workspace
-from azureml.core.authentication import ServicePrincipalAuthentication
+from azureml.core.authentication import AzureCliAuthentication
 from azureml.core.run import Run
 from azureml.core.experiment import Experiment
 from azureml.core.model import Model
@@ -139,9 +139,12 @@ def trigger_training_job():
     #
     # Step 5: Put model to Azure ML Service
     #
+    cli_auth = AzureCliAuthentication()
+
     ws = Workspace(workspace_name = workspace,
                subscription_id = subscription_id,
-               resource_group = resource_grp)
+               resource_group = resource_grp,
+               auth=cli_auth)
     ws.get_details()
     # start a training run by defining an experiment
     myexperiment = Experiment(ws, experiment_name)
