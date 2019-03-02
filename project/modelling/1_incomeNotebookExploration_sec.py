@@ -25,7 +25,7 @@
 
 # Set parameters to authenticate to storage account
 
-azureKevVaultstor2Name = "<<stor name>>"               # see step_3
+storageAccountName = "<<stor name>>"                   # see step_3
 azureKevVaultstor2Key = "stor-key"                     # see step_4a
 secretScope = "devaisec"                               # see step_4b
 storageContainer = "dbrdata"                           # see step_4c
@@ -55,7 +55,7 @@ from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
 # COMMAND ----------
 
 #Authenticate to storage account
-blogdevaisecstor2key = dbutils.secrets.get(scope = secretScope, key = azureKevVaultSecretName)
+blogdevaisecstor2key = dbutils.secrets.get(scope = secretScope, key = azureKevVaultstor2Key)
 spark.conf.set("fs.azure.account.key." + storageAccountName + ".dfs.core.windows.net", blogdevaisecstor2key)
 spark.conf.set("fs.azure.createRemoteFileSystemDuringInitialization", "true")
 dbutils.fs.ls("abfss://" + storageContainer + "@" + storageAccountName + ".dfs.core.windows.net/")
