@@ -208,7 +208,7 @@ model2000.compile(loss='categorical_crossentropy',
 
 # COMMAND ----------
 
-# MAGIC %md ##### 1f.  Model Training : without Data Augmentation (Takes 5-8 Mins)
+# MAGIC %md ##### 1f.  Model Training : without Data Augmentation (Takes 1 Min)
 
 # COMMAND ----------
 

@@ -11,6 +11,8 @@
 # MAGIC 
 # MAGIC 1. Log metrics of models that was trained on 2000 pictures and all 60000 pictures
 # MAGIC 2. Register best model (trained with 60000 pictures)
+# MAGIC 
+# MAGIC Make sure you added libraries to azureml-sdk[databricks], Keras and TensorFlow to your cluster.
 
 # COMMAND ----------
 
@@ -28,6 +30,8 @@ par_model2000_name = 'cifar_2000pictures.h5'
 par_modelall_name = 'cifar_allpictures.h5' 
 
 par_experiment_name = 'cifar10'
+
+# In case cell gets status "cancelled" after execution, uninstall libraries, restart cluster and reinstall libraries
 
 # COMMAND ----------
 

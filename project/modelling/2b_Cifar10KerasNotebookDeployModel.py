@@ -10,6 +10,8 @@
 # MAGIC %md ##### In this notebook the following steps will be excuted:
 # MAGIC 
 # MAGIC 1. Create endpoint of best model (trained with 60000 pictures)
+# MAGIC 
+# MAGIC Make sure you added libraries to azureml-sdk[databricks], Keras and TensorFlow to your cluster.
 
 # COMMAND ----------
 
@@ -23,6 +25,8 @@ subscription_id="<<your_subscriptionid_amlservice>>"
 
 par_model_name = 'cifar_allpictures.h5' 
 par_service_name = 'cifar10'
+
+# In case cell gets status "cancelled" after execution, uninstall libraries, restart cluster and reinstall libraries
 
 # COMMAND ----------
 
