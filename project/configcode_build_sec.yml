@@ -3,7 +3,6 @@ resources:
 queue:
   name: Hosted Ubuntu 1604
 steps:
-steps:
 - task: UsePythonVersion@0
   displayName: 'Use Python 3.6'
   inputs:
