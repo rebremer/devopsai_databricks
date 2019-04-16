@@ -3,13 +3,11 @@ resources:
 queue:
   name: Hosted Ubuntu 1604
 steps:
-- task: CondaEnvironment@1
-  displayName: 'Create_custom_environment'
+steps:
+- task: UsePythonVersion@0
+  displayName: 'Use Python 3.6'
   inputs:
-    createCustomEnvironment: true
-    environmentName: 'Create_custom_environment'
-    packageSpecs: 'python=3.6'
-    updateConda: false
+    versionSpec: 3.6
 
 - task: Bash@3
   displayName: 'Install dependencies'

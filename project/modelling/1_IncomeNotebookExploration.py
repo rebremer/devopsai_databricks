@@ -28,6 +28,7 @@ import os
 import urllib
 import pprint
 import numpy as np
+import time
 
 from pyspark.ml import Pipeline, PipelineModel
 from pyspark.ml.feature import OneHotEncoder, StringIndexer, VectorAssembler
@@ -47,6 +48,8 @@ if os.path.isfile(datafile_dbfs):
 else:
     print("downloading {} to {}".format(datafile, datafile_dbfs))
     urllib.request.urlretrieve(os.path.join(basedataurl, datafile), datafile_dbfs)
+    time.sleep(30)
+    
 
 # COMMAND ----------
 
