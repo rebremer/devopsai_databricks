@@ -2,7 +2,7 @@ import azureml
 import os, json, sys
 from azureml.core import Workspace, Run
 from azureml.core.webservice import AciWebservice, Webservice
-from azureml.core.authentication import ServicePrincipalAuthentication
+from azureml.core.authentication import AzureCliAuthentication
 from azureml.core.image import ContainerImage, Image
 
 # display the core SDK version number
@@ -11,9 +11,6 @@ print("Azure ML SDK Version: ", azureml.core.VERSION)
 # Define Vars < Change the vars>. 
 # In a production situation, don't put secrets in source code, but as secret variables, 
 # see https://docs.microsoft.com/en-us/azure/devops/pipelines/process/variables?view=azure-devops&tabs=yaml%2Cbatch#secret-variables
-tenant_id="<Enter Your Tenant Id>"
-app_id="<Application Id of the SPN you Create>"
-app_key= "<Key for the SPN>"
 workspace="<Name of your workspace>"
 subscription_id="<Subscription id>"
 resource_grp="<Name of your resource group where aml service is created>"
@@ -34,11 +31,11 @@ except:
 
 # Start creating 
 # Point file to conf directory containing details for the aml service
-spn = ServicePrincipalAuthentication(tenant_id,app_id,app_key)
-ws = Workspace(auth = spn,
-            workspace_name = workspace,
-            subscription_id = subscription_id,
-            resource_group = resource_grp)
+cli_auth = AzureCliAuthentication()
+ws = Workspace(workspace_name = workspace,
+               subscription_id = subscription_id,
+               resource_group = resource_grp,
+               auth=cli_auth)
 
 image_name = config["image_name"]
 image_version = config["image_version"]

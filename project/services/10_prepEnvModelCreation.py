@@ -2,7 +2,7 @@ import azureml.core
 from azureml.core import Workspace
 from azureml.core import Experiment
 import base64
-from azureml.core.authentication import ServicePrincipalAuthentication
+from azureml.core.authentication import AzureCliAuthentication
 import requests
 
 def trigger_data_prep():
@@ -10,15 +10,12 @@ def trigger_data_prep():
     # Define Vars < Change the vars>. 
     # In a production situation, don't put secrets in source code, but as secret variables, 
     # see https://docs.microsoft.com/en-us/azure/devops/pipelines/process/variables?view=azure-devops&tabs=yaml%2Cbatch#secret-variables
-    tenant_id="<Enter Your Tenant Id>"
-    app_id="<Application Id of the SPN you Create>"
-    app_key= "<Key for the SPN>"
     workspace="<Name of your workspace>"
     subscription_id="<Subscription id>"
     resource_grp="<Name of your resource group where aml service is created>"
 
     domain = "westeurope.azuredatabricks.net" # change location in case databricks instance is not in westeurope
-    DBR_PAT_TOKEN = bytes("<<your Databricks Personal Access Token>>", encoding='utf-8')  # adding b'
+    DBR_PAT_TOKEN = bytes("<<your Databricks Personal Access Token>>", encoding='utf-8') # adding b'
 
     dataset = "AdultCensusIncome.csv"
     notebook = "3_IncomeNotebookDevops.py"
@@ -28,11 +25,13 @@ def trigger_data_prep():
     print("Azure ML SDK Version: ", azureml.core.VERSION)
 
     # Point file to conf directory containing details for the aml service
-    spn = ServicePrincipalAuthentication(tenant_id,app_id,app_key)
-    ws = Workspace(auth = spn,
-            workspace_name = workspace,
-            subscription_id = subscription_id,
-            resource_group = resource_grp)
+
+    cli_auth = AzureCliAuthentication()
+    ws = Workspace(workspace_name = workspace,
+                   subscription_id = subscription_id,
+                   resource_group = resource_grp,
+                   auth=cli_auth)
+
     print(ws.name, ws._workspace_name, ws.resource_group, ws.location, sep = '\t')
 
     # Create a new experiment

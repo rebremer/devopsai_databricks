@@ -1,23 +1,32 @@
+import sys
 import requests
 import time
+import base64
+import datetime
+import azureml.core
+import shutil
+import os, json
+from azureml.core import Workspace
+from azureml.core.authentication import AzureCliAuthentication
+from azureml.core.run import Run
+from azureml.core.experiment import Experiment
+from azureml.core.model import Model
 
-def trigger_training_job(script_folder, notebook):
+def trigger_training_job():
 
     # Define Vars < Change the vars>. 
     # In a production situation, don't put secrets in source code, but as secret variables, 
     # see https://docs.microsoft.com/en-us/azure/devops/pipelines/process/variables?view=azure-devops&tabs=yaml%2Cbatch#secret-variables
-    tenant_id="<Enter Your Tenant Id>"
-    app_id="<Application Id of the SPN you Create>"
-    app_key= "<Key for the SPN>"
     workspace="<Name of your workspace>"
     subscription_id="<Subscription id>"
     resource_grp="<Name of your resource group where aml service is created>"
 
     domain = "westeurope.azuredatabricks.net" # change location in case databricks instance is not in westeurope
-    DBR_PAT_TOKEN = bytes("<<your Databricks Personal Access Token>>", encoding='utf-8')  # adding b'
+    DBR_PAT_TOKEN = bytes("<<your Databricks Personal Access Token>>", encoding='utf-8') # adding b'
 
     notebookRemote = "/3_IncomeNotebookDevops"
     experiment_name = "experiment_model_release"
+    model_name_run = datetime.datetime.now().strftime("%Y%m%d%H%M%S")+ "_dbrmod.mml" # in case you want to change the name, keep the .mml extension
     model_name = "databricksmodel.mml" # in case you want to change the name, keep the .mml extension
 
     #
@@ -52,8 +61,7 @@ def trigger_training_job(script_folder, notebook):
                 "notebook_task": {
                 "notebook_path": notebookRemote,
                 "base_parameters": [{"key":"subscription_id", "value":subscription_id}, {"key":"resource_group", "value":resource_grp}, {"key":"workspace_name","value":workspace},
-                                    {"key":"experiment_name", "value":experiment_name}, {"key":"model_name", "value":model_name},
-                                    {"key": "spn_tenant", "value": tenant_id},{"key": "spn_clientid", "value": app_id}, {"key": "spn_clientsecret", "value": app_key}
+                                    {"key":"model_name", "value":model_name_run}
                                    ]
              }
         }
@@ -113,10 +121,69 @@ def trigger_training_job(script_folder, notebook):
             count += 1
             time.sleep(30) # wait 30 seconds before next status update
 
+    #
+    # Step 4: Retrieve model from dbfs
+    #
+    mdl, ext = model_name_run.split(".")
+    model_zip_run = mdl + ".zip"
+    
+    response = requests.get(
+        'https://%s/api/2.0/dbfs/read?path=/%s' % (domain, model_zip_run),
+        headers={'Authorization': b"Bearer " + DBR_PAT_TOKEN}
+    )
+    if response.status_code != 200:
+        print("Error copying dbfs results: %s: %s" % (response.json()["error_code"], response.json()["message"]))
+        exit(6)
+
+    model_output = base64.b64decode(response.json()['data'])
+
+    # download model in deploy folder
+    os.chdir("deploy")
+    with open(model_zip_run, "wb") as outfile:
+        outfile.write(model_output)
+    print("Downloaded model {} to Project root directory".format(model_name))
+
+    #
+    # Step 5: Put model to Azure ML Service
+    #
+    cli_auth = AzureCliAuthentication()
+
+    ws = Workspace(workspace_name = workspace,
+               subscription_id = subscription_id,
+               resource_group = resource_grp,
+               auth=cli_auth)
+    ws.get_details()
+    # start a training run by defining an experiment
+    myexperiment = Experiment(ws, experiment_name)
+    run = myexperiment.start_logging()
+    run.upload_file("outputs/" + model_zip_run, model_zip_run)
+    run.complete()
+    run_id = run.id
+    print ("run id:", run_id)
+
+    # unzip file to model_name_run
+    shutil.unpack_archive(model_zip_run, model_name_run)
+
+    model = Model.register(
+        model_path=model_name_run,  # this points to a local file
+        model_name=model_name,  # this is the name the model is registered as
+        tags={"area": "spar", "type": "regression", "run_id": run_id},
+        description="Medium blog test model",
+        workspace=ws,
+    )
+    print("Model registered: {} \nModel Description: {} \nModel Version: {}".format(model.name, model.description, model.version))
+
+    # Step 6. Finally, writing the registered model details to conf/model.json
+    model_json = {}
+    model_json["model_name"] = model.name
+    model_json["model_version"] = model.version
+    model_json["run_id"] = run_id
+    model_json["model_name_run"] = model_name_run
+    with open("../conf/model.json", "w") as outfile:
+        json.dump(model_json, outfile)
+
 def main():
-    script_folder = "modelling"
-    notebook = "/trainDBrNotebook"
-    trigger_training_job(script_folder, notebook)
+    trigger_training_job()
 
 if __name__ == "__main__":
     main()

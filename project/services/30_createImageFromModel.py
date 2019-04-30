@@ -4,7 +4,7 @@ import shutil
 import azureml
 from azureml.core import Workspace, Run
 from azureml.core.conda_dependencies import CondaDependencies 
-from azureml.core.authentication import ServicePrincipalAuthentication
+from azureml.core.authentication import AzureCliAuthentication
 from azureml.core.image import ContainerImage, Image
 from azureml.core.model import Model
 
@@ -14,9 +14,6 @@ print("Azure ML SDK Version: ", azureml.core.VERSION)
 # Define Vars < Change the vars>. 
 # In a production situation, don't put secrets in source code, but as secret variables, 
 # see https://docs.microsoft.com/en-us/azure/devops/pipelines/process/variables?view=azure-devops&tabs=yaml%2Cbatch#secret-variables
-tenant_id="<Enter Your Tenant Id>"
-app_id="<Application Id of the SPN you Create>"
-app_key= "<Key for the SPN>"
 workspace="<Name of your workspace>"
 subscription_id="<Subscription id>"
 resource_grp="<Name of your resource group where aml service is created>"
@@ -24,16 +21,31 @@ resource_grp="<Name of your resource group where aml service is created>"
 model_name = "databricksmodel.mml" # in case you want to change the name, keep the .mml extension
 service_name = "databricksmodel"
 
+# Get the latest evaluation result
+try:
+    with open("conf/model.json") as f:
+        config = json.load(f)
+except:
+    print("No new model to register thus no need to create new scoring image")
+    # raise Exception('No new model to register as production model perform better')
+    sys.exit(0)
+
+model_name = config["model_name"]
+model_version = config["model_version"]
+
 print("Starting to download the model file")
     
 # Start creating 
 # Point file to conf directory containing details for the aml service
-spn = ServicePrincipalAuthentication(tenant_id,app_id,app_key)
-ws = Workspace(auth = spn,
-            workspace_name = workspace,
-            subscription_id = subscription_id,
-            resource_group = resource_grp)
-model=Model(ws,model_name)
+cli_auth = AzureCliAuthentication()
+ws = Workspace(workspace_name = workspace,
+               subscription_id = subscription_id,
+               resource_group = resource_grp,
+               auth=cli_auth)
+
+model_list = Model.list(workspace=ws)
+model, = (m for m in model_list if m.version == model_version and m.name == model_name)
+print("Model picked: {} \nModel Description: {} \nModel Version: {}".format(model.name, model.description, model.version))
 
 #print("Writing Conda File")
 #myenv = CondaDependencies()

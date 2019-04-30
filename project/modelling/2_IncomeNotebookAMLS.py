@@ -20,9 +20,6 @@
 
 # COMMAND ----------
 
-tenant_id="<Enter Your Tenant Id>"
-app_id="<Application Id of the SPN you Create>"
-app_key= "<Key for the SPN>"
 workspace="<Name of your workspace>"
 subscription_id="<Subscription id>"
 resource_grp="<Name of your resource group where aml service is created>"
@@ -34,7 +31,6 @@ model_name = "databricksmodel.mml" # in case you want to change the name, keep t
 
 import azureml.core
 from azureml.core import Workspace
-from azureml.core.authentication import ServicePrincipalAuthentication
 from azureml.core.run import Run
 from azureml.core.experiment import Experiment
 
@@ -43,9 +39,7 @@ print("SDK version:", azureml.core.VERSION)
 
 # COMMAND ----------
 
-spn = ServicePrincipalAuthentication(tenant_id, app_id, app_key)
-ws = Workspace(auth = spn,
-               workspace_name = workspace,
+ws = Workspace(workspace_name = workspace,
                subscription_id = subscription_id,
                resource_group = resource_grp)
 

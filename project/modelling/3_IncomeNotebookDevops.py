@@ -17,19 +17,7 @@
 
 # COMMAND ----------
 
-par_subscription_id = dbutils.widgets.get("subscription_id")
-par_resource_group = dbutils.widgets.get("resource_group")
-par_workspace_name = dbutils.widgets.get("workspace_name")
-par_experiment_name= dbutils.widgets.get("experiment_name")
 par_model_name= dbutils.widgets.get("model_name")
-
-#par_spn_tenant = dbutils.secrets.get(scope = par_secret_scope, key = "mlws-spn-tenant")
-#par_spn_clientid = dbutils.secrets.get(scope = par_secret_scope, key = "mlws-spn-clientid")
-#par_spn_clientsecret = dbutils.secrets.get(scope =par_secret_scope, key = "mlws-spn-clientsecret")
-
-par_spn_tenant = dbutils.widgets.get("spn_tenant")
-par_spn_clientid = dbutils.widgets.get("spn_clientid")
-par_spn_clientsecret = dbutils.widgets.get("spn_clientsecret")
 
 # COMMAND ----------
 
@@ -41,21 +29,6 @@ from azureml.core.experiment import Experiment
 
 # Check core SDK version number
 print("SDK version:", azureml.core.VERSION)
-
-# COMMAND ----------
-
-spn = ServicePrincipalAuthentication(par_spn_tenant, par_spn_clientid, par_spn_clientsecret)
-ws = Workspace(auth = spn,
-               workspace_name = par_workspace_name,
-               subscription_id = par_subscription_id,
-               resource_group = par_resource_group)
-
-ws.get_details()
-
-print('Workspace name: ' + ws.name, 
-      'Azure region: ' + ws.location, 
-      'Subscription id: ' + ws.subscription_id, 
-      'Resource group: ' + ws.resource_group, sep = '\n')
 
 # COMMAND ----------
 
@@ -137,10 +110,6 @@ assembler = VectorAssembler(inputCols=featureCols, outputCol="features")
 
 model_dbfs = os.path.join("/dbfs", par_model_name)
 
-# start a training run by defining an experiment
-myexperiment = Experiment(ws, par_experiment_name)
-root_run = myexperiment.start_logging()
-
 # COMMAND ----------
 
 # Regularization Rates
@@ -150,54 +119,54 @@ from pyspark.ml.classification import LogisticRegression
 reg=0
 print("Regularization rate: {}".format(reg))
 # create a bunch of child runs
-with root_run.child_run("reg-" + str(reg)) as run:
-    # create a new Logistic Regression model.
+#with root_run.child_run("reg-" + str(reg)) as run:
+# create a new Logistic Regression model.
         
-    lr = LogisticRegression(regParam=reg)
+lr = LogisticRegression(regParam=reg)
         
-    # put together the pipeline
-    pipe = Pipeline(stages=[*si_xvars, *ohe_xvars, si_label, assembler, lr])
+# put together the pipeline
+pipe = Pipeline(stages=[*si_xvars, *ohe_xvars, si_label, assembler, lr])
 
-    # train the model
-    model_pipeline = pipe.fit(trainingData)
+# train the model
+model_pipeline = pipe.fit(trainingData)
         
-    # make prediction
-    predictions = model_pipeline.transform(testData)
+# make prediction
+predictions = model_pipeline.transform(testData)
 
-    # evaluate. note only 2 metrics are supported out of the box by Spark ML.
-    bce = BinaryClassificationEvaluator(rawPredictionCol='rawPrediction')
-    au_roc = bce.setMetricName('areaUnderROC').evaluate(predictions)
-    au_prc = bce.setMetricName('areaUnderPR').evaluate(predictions)
-    truePositive = predictions.select("label").filter("label = 1 and prediction = 1").count()
-    falsePositive = predictions.select("label").filter("label = 0 and prediction = 1").count()
-    trueNegative = predictions.select("label").filter("label = 0 and prediction = 0").count()
-    falseNegative = predictions.select("label").filter("label = 1 and prediction = 0").count()
+# evaluate. note only 2 metrics are supported out of the box by Spark ML.
+bce = BinaryClassificationEvaluator(rawPredictionCol='rawPrediction')
+au_roc = bce.setMetricName('areaUnderROC').evaluate(predictions)
+au_prc = bce.setMetricName('areaUnderPR').evaluate(predictions)
+truePositive = predictions.select("label").filter("label = 1 and prediction = 1").count()
+falsePositive = predictions.select("label").filter("label = 0 and prediction = 1").count()
+trueNegative = predictions.select("label").filter("label = 0 and prediction = 0").count()
+falseNegative = predictions.select("label").filter("label = 1 and prediction = 0").count()
 
-    # log reg, au_roc, au_prc and feature names in run history
-    run.log("reg", reg)
-    run.log("au_roc", au_roc)
-    run.log("au_prc", au_prc)
+# log reg, au_roc, au_prc and feature names in run history
+#run.log("reg", reg)
+#run.log("au_roc", au_roc)
+#run.log("au_prc", au_prc)
         
-    print("Area under ROC: {}".format(au_roc))
-    print("Area Under PR: {}".format(au_prc))
+print("Area under ROC: {}".format(au_roc))
+print("Area Under PR: {}".format(au_prc))
        
-    run.log("truePositive", truePositive)
-    run.log("falsePositive", falsePositive)
-    run.log("trueNegative", trueNegative)
-    run.log("falseNegative", falseNegative)
+#    run.log("truePositive", truePositive)
+#    run.log("falsePositive", falsePositive)
+#    run.log("trueNegative", trueNegative)
+#    run.log("falseNegative", falseNegative)
                                                                                                                                                                   
-    print("TP: " + str(truePositive) + ", FP: " + str(falsePositive) + ", TN: " + str(trueNegative) + ", FN: " + str(falseNegative))                                                                         
+print("TP: " + str(truePositive) + ", FP: " + str(falsePositive) + ", TN: " + str(trueNegative) + ", FN: " + str(falseNegative))                                                                         
         
-    run.log_list("columns", trainingData.columns)
+#    run.log_list("columns", trainingData.columns)
 
-    # save model
-    model_pipeline.write().overwrite().save(par_model_name)
+# save model
+model_pipeline.write().overwrite().save(par_model_name)
         
-    # upload the serialized model into run history record
-    mdl, ext = par_model_name.split(".")
-    model_zip = mdl + ".zip"
-    shutil.make_archive(mdl, 'zip', model_dbfs)
-    run.upload_file("outputs/" + par_model_name, model_zip)        
+# upload the serialized model into run history record
+mdl, ext = par_model_name.split(".")
+model_zip = mdl + ".zip"
+shutil.make_archive('/dbfs/'+ mdl, 'zip', model_dbfs)
+##    run.upload_file("outputs/" + par_model_name, model_zip)        
     #run.upload_file("outputs/" + model_name, path_or_stream = model_dbfs) #cannot deal with folders
 
     # now delete the serialized model from local folder since it is already uploaded to run history 
@@ -208,20 +177,18 @@ with root_run.child_run("reg-" + str(reg)) as run:
 # COMMAND ----------
 
 # Declare run completed
-root_run.complete()
-root_run_id = root_run.id
-print ("run id:", root_run.id)
+#root_run.complete()
+#root_run_id = root_run.id
+#print ("run id:", root_run.id)
 
 # COMMAND ----------
 
 #Register the model already in the Model Managment of azure ml service workspace
-from azureml.core.model import Model
-mymodel = Model.register(model_path = "/dbfs/" + par_model_name, # this points to a local file
-                       model_name = par_model_name, # this is the name
-                       description = "testrbdbr",
-                       workspace = ws)
-print(mymodel.name, mymodel.id, mymodel.version, sep = '\t')
+#from azureml.core.model import Model
+#mymodel = Model.register(model_path = "/dbfs/" + par_model_name, # this points to a local file
+#                       model_name = par_model_name, # this is the name
+#                       description = "testrbdbr",
+#                       workspace = ws)
+#print(mymodel.name, mymodel.id, mymodel.version, sep = '\t')
 
 # COMMAND ----------
-
-
