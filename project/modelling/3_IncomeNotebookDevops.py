@@ -21,23 +21,13 @@ par_model_name= dbutils.widgets.get("model_name")
 
 # COMMAND ----------
 
-import azureml.core
-from azureml.core import Workspace
-from azureml.core.authentication import ServicePrincipalAuthentication
-from azureml.core.run import Run
-from azureml.core.experiment import Experiment
-
-# Check core SDK version number
-print("SDK version:", azureml.core.VERSION)
-
-# COMMAND ----------
-
 import os
 import urllib
 import pprint
 import numpy as np
 import shutil
 import time
+import json
 
 from pyspark.ml import Pipeline, PipelineModel
 from pyspark.ml.feature import OneHotEncoder, OneHotEncoderEstimator, StringIndexer, VectorAssembler
@@ -166,6 +156,20 @@ model_pipeline.write().overwrite().save(par_model_name)
 mdl, ext = par_model_name.split(".")
 model_zip = mdl + ".zip"
 shutil.make_archive('/dbfs/'+ mdl, 'zip', model_dbfs)
+
+# write model metrics to dbfs
+# Step 6. Finally, writing the registered model details to conf/model.json
+model_metrics_json = {}
+model_metrics_json["Area_Under_ROC"] = au_roc
+model_metrics_json["Area_Under_PR"] = au_prc
+model_metrics_json["True_Positives"] = truePositive
+model_metrics_json["False_Positives"] = falsePositive
+model_metrics_json["True_Negatives"] = trueNegative
+model_metrics_json["False_Negatives"] = falseNegative
+
+with open("/dbfs/" + mdl + "_metrics.json", "w") as outfile:
+    json.dump(model_metrics_json, outfile)
+
 ##    run.upload_file("outputs/" + par_model_name, model_zip)        
     #run.upload_file("outputs/" + model_name, path_or_stream = model_dbfs) #cannot deal with folders
 

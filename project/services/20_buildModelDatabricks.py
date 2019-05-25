@@ -12,6 +12,13 @@ from azureml.core.run import Run
 from azureml.core.experiment import Experiment
 from azureml.core.model import Model
 
+from azureml.core.compute import ComputeTarget, DatabricksCompute
+from azureml.exceptions import ComputeTargetException
+from azureml.pipeline.core import Pipeline, PipelineData
+from azureml.pipeline.steps import DatabricksStep
+from azureml.core.datastore import Datastore
+from azureml.data.data_reference import DataReference
+
 def trigger_training_job():
 
     # Define Vars < Change the vars>. 
@@ -22,107 +29,49 @@ def trigger_training_job():
     resource_grp="<Name of your resource group where aml service is created>"
 
     domain = "westeurope.azuredatabricks.net" # change location in case databricks instance is not in westeurope
-    DBR_PAT_TOKEN = bytes("<<your Databricks Personal Access Token>>", encoding='utf-8') # adding b'
+    databricks_name = "<<Your Databricks Service Name>>"
+    dbr_pat_token_raw = "<<your Databricks Personal Access Token>>"
 
+    DBR_PAT_TOKEN = bytes(dbr_pat_token_raw, encoding='utf-8') # adding b'
     notebookRemote = "/3_IncomeNotebookDevops"
     experiment_name = "experiment_model_release"
     model_name_run = datetime.datetime.now().strftime("%Y%m%d%H%M%S")+ "_dbrmod.mml" # in case you want to change the name, keep the .mml extension
     model_name = "databricksmodel.mml" # in case you want to change the name, keep the .mml extension
+    db_compute_name="dbr-amls-comp"
 
     #
-    # Step 1: Create job and attach it to cluster
+    # Step 1: Run notebook using Databricks Compute in AML SDK
     #
-    # In this steps, secret are added as parameters (spn_tenant, spn_clientid, spn_clientsecret)
-    # Never do this in a production situation, but use secret scope backed by key vault instead
-    # See https://docs.azuredatabricks.net/user-guide/secrets/secret-scopes.html#azure-key-vault-backed-scopes
-    response = requests.post(
-        'https://%s/api/2.0/jobs/create' % domain,
-        headers={'Authorization': b"Bearer " + DBR_PAT_TOKEN},
-        json={
-                "name": "Run AzureDevopsNotebook Job",
-                "new_cluster": {
-                    "spark_version": "4.0.x-scala2.11",
-                    "node_type_id": "Standard_D3_v2",
-                    "spark_env_vars": {
-                        'PYSPARK_PYTHON': '/databricks/python3/bin/python3',
-                    },
-                    "autoscale": {
-                        "min_workers": 1,
-                        "max_workers": 2
-                    }
-                },
-                "libraries": [
-                   {
-                     "pypi": {
-                        "package": "azureml-sdk[databricks]"
-                     }
-                  }
-                ],
-                "notebook_task": {
-                "notebook_path": notebookRemote,
-                "base_parameters": [{"key":"subscription_id", "value":subscription_id}, {"key":"resource_group", "value":resource_grp}, {"key":"workspace_name","value":workspace},
-                                    {"key":"model_name", "value":model_name_run}
-                                   ]
-             }
-        }
+    cli_auth = AzureCliAuthentication()
+
+    ws = Workspace(workspace_name = workspace,
+               subscription_id = subscription_id,
+               resource_group = resource_grp,
+               auth=cli_auth)
+    ws.get_details()
+
+    try:
+        databricks_compute = DatabricksCompute(workspace=ws, name=db_compute_name)
+    except:
+        print ("Compute not found")
+
+    dbNbStep = DatabricksStep(
+        name="DBNotebookInAMLS",
+        num_workers=1,
+        notebook_path=notebookRemote,
+        notebook_params={"model_name": model_name_run},
+        run_name='AMLS Notebook production' + model_name_run,
+        compute_target=databricks_compute,
+        allow_reuse=False
     )
-
-    if response.status_code != 200:
-        print("Error launching cluster: %s: %s" % (response.json()["error_code"], response.json()["message"]))
-        exit(2)
+    #
+    steps = [dbNbStep]
+    pipeline = Pipeline(description="Build model in production", workspace=ws, steps=steps)
+    pipeline_run = Experiment(ws, "dbr-pipeline-run").submit(pipeline)
+    pipeline_run.wait_for_completion()
 
     #
-    # Step 2: Start job
-    #
-    databricks_job_id = response.json()['job_id']
-
-    response = requests.post(
-        'https://%s/api/2.0/jobs/run-now' % domain,
-        headers={'Authorization': b"Bearer " + DBR_PAT_TOKEN},
-        json={
-            "job_id": + databricks_job_id
-        }
-    )
-
-    if response.status_code != 200:
-        print("Error launching cluster: %s: %s" % (response.json()["error_code"], response.json()["message"]))
-        exit(3)
-
-    print(response.json()['run_id'])
-
-    #
-    # Step 3: Wait until job is finished
-    #
-    databricks_run_id = response.json()['run_id']
-    scriptRun = 1
-    count = 0
-    while scriptRun == 1:
-        response = requests.get(
-            'https://%s/api/2.0/jobs/runs/get?run_id=%s' % (domain, databricks_run_id),
-            headers={'Authorization': b"Bearer " + DBR_PAT_TOKEN},
-        )
-
-        state = response.json()['state']
-        life_cycle_state = state['life_cycle_state']
-        print(state)
-
-        if life_cycle_state in ["TERMINATED", "SKIPPED", "INTERNAL_ERROR"]:
-            result_state = state['result_state']
-            if result_state == "SUCCESS":
-                print("run ok")
-                scriptRun = 0
-            #exit(0)
-            else:
-                exit(4)
-        elif count > 180:
-            print("time out occurred after 30 minutes")
-            exit(5)
-        else:
-            count += 1
-            time.sleep(30) # wait 30 seconds before next status update
-
-    #
-    # Step 4: Retrieve model from dbfs
+    # Step 2: Retrieve model from dbfs
     #
     mdl, ext = model_name_run.split(".")
     model_zip_run = mdl + ".zip"
@@ -133,7 +82,7 @@ def trigger_training_job():
     )
     if response.status_code != 200:
         print("Error copying dbfs results: %s: %s" % (response.json()["error_code"], response.json()["message"]))
-        exit(6)
+        exit(1)
 
     model_output = base64.b64decode(response.json()['data'])
 
@@ -144,19 +93,38 @@ def trigger_training_job():
     print("Downloaded model {} to Project root directory".format(model_name))
 
     #
-    # Step 5: Put model to Azure ML Service
+    # Step 3: Retrieve model metrics from dbfs
     #
-    cli_auth = AzureCliAuthentication()
+    mdl, ext = model_name_run.split(".")
+    model_metrics_json_run = mdl + "_metrics.json"
+    
+    response = requests.get(
+        'https://%s/api/2.0/dbfs/read?path=/%s' % (domain, model_metrics_json_run),
+        headers={'Authorization': b"Bearer " + DBR_PAT_TOKEN}
+    )
+    if response.status_code != 200:
+        print("Error copying dbfs results: %s: %s" % (response.json()["error_code"], response.json()["message"]))
+        exit(2)
 
-    ws = Workspace(workspace_name = workspace,
-               subscription_id = subscription_id,
-               resource_group = resource_grp,
-               auth=cli_auth)
-    ws.get_details()
+    model_metrics_output = json.loads(base64.b64decode(response.json()['data']))
+
+    #
+    # Step 4: Put model and metrics to Azure ML Service
+    #
+
     # start a training run by defining an experiment
     myexperiment = Experiment(ws, experiment_name)
     run = myexperiment.start_logging()
     run.upload_file("outputs/" + model_zip_run, model_zip_run)
+
+    run.log("pipeline_run", pipeline_run.id)
+    run.log("au_roc", model_metrics_output["Area_Under_ROC"])
+    run.log("au_prc", model_metrics_output["Area_Under_PR"])
+    run.log("truePostive", model_metrics_output["True_Positives"])
+    run.log("falsePostive", model_metrics_output["False_Positives"])
+    run.log("trueNegative", model_metrics_output["True_Negatives"])
+    run.log("falseNegative", model_metrics_output["False_Negatives"])   
+
     run.complete()
     run_id = run.id
     print ("run id:", run_id)
@@ -173,7 +141,7 @@ def trigger_training_job():
     )
     print("Model registered: {} \nModel Description: {} \nModel Version: {}".format(model.name, model.description, model.version))
 
-    # Step 6. Finally, writing the registered model details to conf/model.json
+    # Step 5. Finally, writing the registered model details to conf/model.json
     model_json = {}
     model_json["model_name"] = model.name
     model_json["model_version"] = model.version

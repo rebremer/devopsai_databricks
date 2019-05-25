@@ -1,9 +1,10 @@
 import azureml
 import os, json, sys
 from azureml.core import Workspace, Run
-from azureml.core.webservice import AciWebservice, Webservice
 from azureml.core.authentication import AzureCliAuthentication
 from azureml.core.image import ContainerImage, Image
+from azureml.core.webservice import Webservice, AksWebservice
+from azureml.core.compute import AksCompute
 
 # display the core SDK version number
 print("Azure ML SDK Version: ", azureml.core.VERSION)
@@ -17,6 +18,8 @@ resource_grp="<Name of your resource group where aml service is created>"
 
 model_name = "databricksmodel.mml" # in case you want to change the name, keep the .mml extension
 service_name = "databricksmodel"
+
+aks_name = sys.argv[1]
 
 # Get the latest evaluation result
 try:
@@ -44,30 +47,32 @@ image, = (m for m in images if m.version==image_version and m.name == image_name
 print('From image.json, Model used: {}\nModel Version {}'.format(config["model_name"], config["model_version"]))
 print('From image.json, Image used to deploy webservice on ACI: {}\nImage Version: {}\nImage Location = {}'.format(image.name, image.version, image.image_location))
 
-#delete old service first before new one
+aks_target = AksCompute(ws,aks_name)
+aks_config = AksWebservice.deploy_configuration(enable_app_insights=True, cpu_cores = 1, memory_gb = 1)
 try:
-    oldservice = Webservice(workspace=ws, name=service_name)
-    print("delete " + service_name + " before creating new one")
-    oldservice.delete()
+    service = AksWebservice(name=service_name, workspace=ws)
+    print(
+        "Deleting service {} with image: {}".format(
+            service_name, image.image_location
+        )
+    )
+    service.delete()
 except:
-    print(service_name + " does not exist, create new one")
+    print("service did not yet exist")
 
-aciconfig = AciWebservice.deploy_configuration(cpu_cores=1, 
-                                               memory_gb=1, 
-                                               tags={"data": "Income",  "method" : "SparkML"}, 
-                                               description='Predict Income with sparkML')  
-
-service = Webservice.deploy_from_image(deployment_config=aciconfig,
-                                        image=image,
-                                        name=service_name,
-                                        workspace=ws)
-
+aks_target = AksCompute(ws,aks_name)
+aks_config = AksWebservice.deploy_configuration(enable_app_insights=True, cpu_cores = 1, memory_gb = 1)
+service = Webservice.deploy_from_image(
+    workspace=ws,
+    name=service_name,
+    image=image,
+    deployment_config=aks_config,
+    deployment_target=aks_target,
+)
 service.wait_for_deployment(show_output=True)
 
-print(service.scoring_uri)
-
-aci_webservice = {}
-aci_webservice['aci_name'] = service.name
-aci_webservice['aci_url'] = service.scoring_uri
-with open('conf/aci_webservice.json', 'w') as outfile:
-  json.dump(aci_webservice,outfile)
+aks_webservice = {}
+aks_webservice['aks_name'] = service.name
+aks_webservice['aks_url'] = service.scoring_uri
+with open('conf/aks_webservice.json', 'w') as outfile:
+  json.dump(aks_webservice,outfile)

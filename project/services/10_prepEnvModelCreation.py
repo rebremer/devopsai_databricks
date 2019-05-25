@@ -4,8 +4,14 @@ from azureml.core import Experiment
 import base64
 from azureml.core.authentication import AzureCliAuthentication
 import requests
+from azureml.core.compute import ComputeTarget, DatabricksCompute
+from azureml.exceptions import ComputeTargetException
+from azureml.pipeline.core import Pipeline, PipelineData
+from azureml.pipeline.steps import DatabricksStep
+from azureml.core.datastore import Datastore
+from azureml.data.data_reference import DataReference
 
-def trigger_data_prep():
+def trigger_env_prep():
 
     # Define Vars < Change the vars>. 
     # In a production situation, don't put secrets in source code, but as secret variables, 
@@ -15,11 +21,14 @@ def trigger_data_prep():
     resource_grp="<Name of your resource group where aml service is created>"
 
     domain = "westeurope.azuredatabricks.net" # change location in case databricks instance is not in westeurope
-    DBR_PAT_TOKEN = bytes("<<your Databricks Personal Access Token>>", encoding='utf-8') # adding b'
+    databricks_name = "<<Your Databricks Name>>"
+    dbr_pat_token_raw = "<<your Databricks Personal Access Token>>"
 
+    DBR_PAT_TOKEN = bytes(dbr_pat_token_raw, encoding='utf-8') # adding b'
     dataset = "AdultCensusIncome.csv"
     notebook = "3_IncomeNotebookDevops.py"
     experiment_name = "experiment_model_release"
+    db_compute_name="dbr-amls-comp"
 
     # Print AML Version
     print("Azure ML SDK Version: ", azureml.core.VERSION)
@@ -43,13 +52,19 @@ def trigger_data_prep():
     print("Upload notebook to databricks")
     upload_notebook(domain, DBR_PAT_TOKEN, notebook)
 
-    # Upload dataset to Databricks
-    # Done in the notebook
-
-    #print("Upload data to databricks")
-    #BASE_URL = 'https://%s/api/2.0/dbfs/' % (domain)
-    #upload_data(BASE_URL, DBR_PAT_TOKEN, dataset)
-
+    print("Add databricks env to Azure ML Service Compute")
+    # Create databricks workspace in AML SDK
+    try:
+        databricks_compute = DatabricksCompute(workspace=ws, name=db_compute_name)
+        print('Compute target {} already exists'.format(db_compute_name))
+    except ComputeTargetException:
+        print('Compute not found, will use below parameters to attach new one')
+        config = DatabricksCompute.attach_configuration(
+            resource_group = resource_grp,
+            workspace_name = databricks_name,
+            access_token= dbr_pat_token_raw)
+        databricks_compute=ComputeTarget.attach(ws, db_compute_name, config)
+        databricks_compute.wait_for_completion(True)
 
 def upload_notebook(domain, DBR_PAT_TOKEN, notebook):
     # Upload notebook to Databricks
@@ -82,28 +97,5 @@ def upload_notebook(domain, DBR_PAT_TOKEN, notebook):
         print("Error copying notebook: %s: %s" % (response.json()["error_code"], response.json()["message"]))
         exit(1)
 
-def upload_data(BASE_URL, DBR_PAT_TOKEN, dataset):
-    # Create a handle that will be used to add blocks
-    handle = dbfs_rpc(BASE_URL, DBR_PAT_TOKEN, "create", {"path": "../dataprep/data/" + dataset, "overwrite": "true"})['handle']
-    with open('/a/local/file') as f:
-        while True:
-            # A block can be at most 1MB
-            block = f.read(1 << 20)
-            if not block:
-                break
-            data = base64.standard_b64encode(block)
-            dbfs_rpc("add-block", {"handle": handle, "data": data})
-    # close the handle to finish uploading
-    dbfs_rpc(BASE_URL, DBR_PAT_TOKEN, "close", {"handle": handle})
-
-def dbfs_rpc(BASE_URL, DBR_PAT_TOKEN, action, body):
-    """ A helper function to make the DBFS API request, request/response is encoded/decoded as JSON """
-    response = requests.post(
-        BASE_URL + action,
-        headers={"Authorization": b"Basic " + base64.standard_b64encode(b"token:" + DBR_PAT_TOKEN)},
-        json=body
-    )
-    return response.json()
-
 if __name__ == "__main__":
-    trigger_data_prep()
+    trigger_env_prep()
