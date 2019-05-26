@@ -47,29 +47,26 @@ image, = (m for m in images if m.version==image_version and m.name == image_name
 print('From image.json, Model used: {}\nModel Version {}'.format(config["model_name"], config["model_version"]))
 print('From image.json, Image used to deploy webservice on ACI: {}\nImage Version: {}\nImage Location = {}'.format(image.name, image.version, image.image_location))
 
-aks_target = AksCompute(ws,aks_name)
-aks_config = AksWebservice.deploy_configuration(enable_app_insights=True, cpu_cores = 1, memory_gb = 1)
 try:
     service = AksWebservice(name=service_name, workspace=ws)
     print(
-        "Deleting service {} with image: {}".format(
+        "Update service {} with image: {}".format(
             service_name, image.image_location
         )
     )
-    service.delete()
+    service.update(image=image)
 except:
-    print("service did not yet exist")
-
-aks_target = AksCompute(ws,aks_name)
-aks_config = AksWebservice.deploy_configuration(enable_app_insights=True, cpu_cores = 1, memory_gb = 1)
-service = Webservice.deploy_from_image(
-    workspace=ws,
-    name=service_name,
-    image=image,
-    deployment_config=aks_config,
-    deployment_target=aks_target,
-)
-service.wait_for_deployment(show_output=True)
+    print("service did not yet exist, create new one")
+    aks_target = AksCompute(ws,aks_name)
+    aks_config = AksWebservice.deploy_configuration(enable_app_insights=True, cpu_cores = 1, memory_gb = 1)
+    service = Webservice.deploy_from_image(
+        workspace=ws,
+        name=service_name,
+        image=image,
+        deployment_config=aks_config,
+        deployment_target=aks_target,
+    )
+    service.wait_for_deployment(show_output=True)
 
 aks_webservice = {}
 aks_webservice['aks_name'] = service.name
