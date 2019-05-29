@@ -49,24 +49,23 @@ print('From image.json, Image used to deploy webservice on ACI: {}\nImage Versio
 
 try:
     service = AksWebservice(name=service_name, workspace=ws)
-    print(
-        "Update service {} with image: {}".format(
-            service_name, image.image_location
-        )
-    )
-    service.update(image=image)
+    print("delete " + service_name + " before creating new one")
+    service.delete()
 except:
-    print("service did not yet exist, create new one")
-    aks_target = AksCompute(ws,aks_name)
-    aks_config = AksWebservice.deploy_configuration(enable_app_insights=True, cpu_cores = 1, memory_gb = 1)
-    service = Webservice.deploy_from_image(
+    print(service_name + " does not exist yet")
+
+aks_target = AksCompute(ws,aks_name)
+aks_config = AksWebservice.deploy_configuration(auth_enabled=False, collect_model_data=True, enable_app_insights=True, cpu_cores = 1, memory_gb = 1)
+service = Webservice.deploy_from_image(
         workspace=ws,
         name=service_name,
         image=image,
         deployment_config=aks_config,
-        deployment_target=aks_target,
-    )
-    service.wait_for_deployment(show_output=True)
+        deployment_target=aks_target
+)
+service.wait_for_deployment(show_output=True)
+
+print (service.scoring_uri)
 
 aks_webservice = {}
 aks_webservice['aks_name'] = service.name
