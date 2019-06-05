@@ -22,6 +22,7 @@ def trigger_env_prep():
 
     domain = "westeurope.azuredatabricks.net" # change location in case databricks instance is not in westeurope
     databricks_name = "<<Your Databricks Name>>"
+    databricks_grp = "<<Name of your resource group where Databricks is created>"
     dbr_pat_token_raw = "<<your Databricks Personal Access Token>>"
 
     DBR_PAT_TOKEN = bytes(dbr_pat_token_raw, encoding='utf-8') # adding b'
@@ -60,7 +61,7 @@ def trigger_env_prep():
     except ComputeTargetException:
         print('Compute not found, will use below parameters to attach new one')
         config = DatabricksCompute.attach_configuration(
-            resource_group = resource_grp,
+            resource_group = databricks_grp,
             workspace_name = databricks_name,
             access_token= dbr_pat_token_raw)
         databricks_compute=ComputeTarget.attach(ws, db_compute_name, config)

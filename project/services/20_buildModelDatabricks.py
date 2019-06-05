@@ -29,7 +29,6 @@ def trigger_training_job():
     resource_grp="<Name of your resource group where aml service is created>"
 
     domain = "westeurope.azuredatabricks.net" # change location in case databricks instance is not in westeurope
-    databricks_name = "<<Your Databricks Service Name>>"
     dbr_pat_token_raw = "<<your Databricks Personal Access Token>>"
 
     DBR_PAT_TOKEN = bytes(dbr_pat_token_raw, encoding='utf-8') # adding b'
