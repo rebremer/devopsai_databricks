@@ -63,6 +63,7 @@ service = Webservice.deploy_from_image(deployment_config=aciconfig,
                                         workspace=ws)
 
 service.wait_for_deployment(show_output=True)
+service.update(tags=image.tags)
 
 print(service.scoring_uri)
 
