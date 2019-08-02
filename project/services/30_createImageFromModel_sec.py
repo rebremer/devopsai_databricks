@@ -42,7 +42,7 @@ ws = Workspace(workspace_name = workspace,
 
 model_list = Model.list(workspace=ws)
 model, = (m for m in model_list if m.version == model_version and m.name == model_name)
-print("Model picked: {} \nModel Description: {} \nModel Version: {}".format(model.name, model.description, model.version))
+print("Model picked: {} \nModel Description: {} \nModel Version: {} \nModel Tags: {}".format(model.name, model.description, model.version, model.tags))
 
 os.chdir("deploy")
 
@@ -66,6 +66,7 @@ image = Image.create(name = service_name,
                      workspace = ws)
 
 image.wait_for_creation(show_output = True)
+image.add_tags(model.tags)
 
 # Writing the model and image details to /aml_config/image.json
 
