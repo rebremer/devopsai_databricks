@@ -64,6 +64,7 @@ service = Webservice.deploy_from_image(
         deployment_target=aks_target
 )
 service.wait_for_deployment(show_output=True)
+service.update(tags=image.tags)
 
 print (service.scoring_uri)
 
