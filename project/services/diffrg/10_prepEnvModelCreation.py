@@ -4,12 +4,6 @@ from azureml.core import Experiment
 import base64
 from azureml.core.authentication import AzureCliAuthentication
 import requests
-from azureml.core.compute import ComputeTarget, DatabricksCompute
-from azureml.exceptions import ComputeTargetException
-from azureml.pipeline.core import Pipeline, PipelineData
-from azureml.pipeline.steps import DatabricksStep
-from azureml.core.datastore import Datastore
-from azureml.data.data_reference import DataReference
 
 def trigger_env_prep():
 

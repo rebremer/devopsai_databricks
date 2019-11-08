@@ -4,3 +4,4 @@ python --version
 pip install --upgrade azureml-sdk[cli]==0.1.80
 pip install azure-cli-core
 pip install numpy
+pip install azure-storage-blob==2.0.1
