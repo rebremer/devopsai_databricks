@@ -4,12 +4,6 @@ from azureml.core import Experiment
 import base64
 from azureml.core.authentication import AzureCliAuthentication
 import requests
-from azureml.core.compute import ComputeTarget, DatabricksCompute
-from azureml.exceptions import ComputeTargetException
-from azureml.pipeline.core import Pipeline, PipelineData
-from azureml.pipeline.steps import DatabricksStep
-from azureml.core.datastore import Datastore
-from azureml.data.data_reference import DataReference
 
 def trigger_env_prep():
 
@@ -21,15 +15,12 @@ def trigger_env_prep():
     resource_grp="<Name of your resource group where aml service is created>"
 
     domain = "westeurope.azuredatabricks.net" # change location in case databricks instance is not in westeurope
-    databricks_name = "<<Your Databricks Name>>"
     dbr_pat_token_raw = "<<your Databricks Personal Access Token>>"
 
     DBR_PAT_TOKEN = bytes(dbr_pat_token_raw, encoding='utf-8') # adding b'
-    databricks_grp = resource_grp
     dataset = "AdultCensusIncome.csv"
     notebook = "3_IncomeNotebookDevops.py"
     experiment_name = "experiment_model_release"
-    db_compute_name="dbr-amls-comp"
 
     # Print AML Version
     print("Azure ML SDK Version: ", azureml.core.VERSION)
@@ -52,20 +43,6 @@ def trigger_env_prep():
 
     print("Upload notebook to databricks")
     upload_notebook(domain, DBR_PAT_TOKEN, notebook)
-
-    print("Add databricks env to Azure ML Service Compute")
-    # Create databricks workspace in AML SDK
-    try:
-        databricks_compute = DatabricksCompute(workspace=ws, name=db_compute_name)
-        print('Compute target {} already exists'.format(db_compute_name))
-    except ComputeTargetException:
-        print('Compute not found, will use below parameters to attach new one')
-        config = DatabricksCompute.attach_configuration(
-            resource_group = databricks_grp,
-            workspace_name = databricks_name,
-            access_token= dbr_pat_token_raw)
-        databricks_compute=ComputeTarget.attach(ws, db_compute_name, config)
-        databricks_compute.wait_for_completion(True)
 
 def upload_notebook(domain, DBR_PAT_TOKEN, notebook):
     # Upload notebook to Databricks
