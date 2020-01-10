@@ -20,7 +20,7 @@ steps:
   inputs:
     azureSubscription: devopsaisec_service_connection
     scriptLocation: inlineScript
-    inlineScript: 'python services/10_prepEnvModelCreation.py'
+    inlineScript: 'python services/DatabricksStep/10_prepEnvModelCreation.py'
     workingDirectory: project
 
 - task: AzureCLI@1
@@ -28,7 +28,7 @@ steps:
   inputs:
     azureSubscription: devopsaisec_service_connection
     scriptLocation: inlineScript
-    inlineScript: 'python services/20_buildModelDatabricks.py'
+    inlineScript: 'python services/DatabricksStep/20_buildModelDatabricks.py'
     workingDirectory: project
 
 - task: AzureCLI@1
