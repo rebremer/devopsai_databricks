@@ -25,7 +25,7 @@ variables:
   environmentNameProd: 'AKS production'
 
   # AKS name. In case you did not configure AKS, no worries, then docker images is just not deployed to AKS
-  AKSName: 'blog-devai-aks4'
+  AKSName: 'blog-devai-aks'
 
   # Project root folder. Point to the folder containing manage.py file.
   projectRoot: $(System.DefaultWorkingDirectory)
