@@ -1,0 +1,153 @@
+# Build/Release pipeline for DevOps for AI project
+# - In stage: Build, a docker image artifact is created containg a ML model built by using Databricks and Azure ML services
+# - In stage: DeployTest, a docker image is deployed to Azure Container Instance (ACI)
+# - In stage: DeployProd, a docker image is deployed to Azure Kubernetes Service (AKS)
+#   - In case no AKS is deployed, no worries, then only the build stage and deployTest are executed and the DeployProd stage just failes
+# https://docs.microsoft.com/azure/devops/pipelines/languages/python
+
+trigger:
+- master
+
+variables:
+  # Azure Resource Manager connection created during pipeline creation
+  azureServiceConnectionId: 'devopsaisec_service_connection'
+  
+  # Agent VM image name
+  vmImageName: 'ubuntu-latest'
+
+  # Python version: 3.6
+  pythonVersion: '3.6'
+
+  # Environment name test
+  environmentNameTest: 'ACI test'
+
+  # Environment name production
+  environmentNameProd: 'AKS production'
+
+  # AKS name. In case you did not configure AKS, no worries, then docker images is just not deployed to AKS
+  AKSName: 'blog-devai-aks4'
+
+  # Project root folder. Point to the folder containing manage.py file.
+  projectRoot: $(System.DefaultWorkingDirectory)
+
+stages:
+- stage: Build
+  displayName: Build model and docker image
+  jobs:
+  - job: BuildDockerImageAzureMLDatabricks
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: UsePythonVersion@0
+      displayName: 'Select Python version'
+      inputs:
+        versionSpec: $(pythonVersion)
+      
+    - task: Bash@3
+      displayName: 'Install dependencies'
+      inputs:
+        targetType: 'filePath'
+        filePath: $(projectRoot)/setup/setup.sh
+      
+    - task: AzureCLI@1
+      displayName: 'Prep Environment for model creation'
+      inputs:
+        azureSubscription: $(azureServiceConnectionId)
+        scriptLocation: inlineScript
+        inlineScript: 'python services/10_prepEnvModelCreation.py'
+        workingDirectory: $(projectRoot)/project
+      
+    - task: AzureCLI@1
+      displayName: 'Build model using Databricks'
+      inputs:
+        azureSubscription: $(azureServiceConnectionId)
+        scriptLocation: inlineScript
+        inlineScript: 'python services/20_buildModelDatabricks.py'
+        workingDirectory: $(projectRoot)/project
+      
+    - task: AzureCLI@1
+      displayName: 'Create image from model'
+      inputs:
+        azureSubscription: $(azureServiceConnectionId)
+        scriptLocation: inlineScript
+        inlineScript: 'python services/30_createImageFromModel.py'
+        workingDirectory: $(projectRoot)/project
+      
+    - task: CopyFiles@2
+      displayName: 'Copy Files to: $(Build.ArtifactStagingDirectory)'
+      inputs:
+        SourceFolder: '$(Build.SourcesDirectory)'
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+      
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Artifact: drop'
+- stage: DeployTest
+  displayName: 'Deploy Image to ACI'
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - deployment: DeployTestACI
+    pool:
+      vmImage: $(vmImageName)
+    environment: $(environmentNameTest)
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: UsePythonVersion@0
+            displayName: 'Select Python version'
+            inputs:
+              versionSpec: $(pythonVersion)
+            
+          - task: Bash@3
+            displayName: 'Install dependencies'
+            inputs:
+              targetType: 'filePath'
+              filePath: $(Pipeline.Workspace)/drop/setup/setup.sh     
+              
+          - task: AzureCLI@1
+            displayName: 'Deploy to ACI'
+            inputs:
+              azureSubscription: $(azureServiceConnectionId)
+              scriptLocation: inlineScript
+              inlineScript: 'python services/40_deployImageToACI.py'
+              workingDirectory: $(Pipeline.Workspace)/drop/project
+              
+          - task: AzureCLI@1
+            displayName: 'Test container running on ACI'
+            inputs:
+              azureSubscription: $(azureServiceConnectionId)
+              scriptLocation: inlineScript
+              inlineScript: 'python services/50_testEndpoint.py'
+              workingDirectory: $(Pipeline.Workspace)/drop/project
+- stage: DeployProd
+  displayName: 'Deploy Image to AKS'
+  dependsOn: DeployTest
+  condition: succeeded()
+  jobs:
+  - deployment: DeployProdAKS
+    pool:
+      vmImage: $(vmImageName)
+    environment: $(environmentNameProd)
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: UsePythonVersion@0
+            displayName: 'Select Python version'
+            inputs:
+              versionSpec: $(pythonVersion)
+            
+          - task: Bash@3
+            displayName: 'Install dependencies'
+            inputs:
+              targetType: 'filePath'
+              filePath: $(Pipeline.Workspace)/drop/setup/setup.sh     
+              
+          - task: AzureCLI@1
+            displayName: 'Deploy to AKS'
+            inputs:
+              azureSubscription: $(azureServiceConnectionId)
+              scriptLocation: inlineScript
+              inlineScript: 'python services/42_deployImageToAKS.py $(AKSName)'
+              workingDirectory: $(Pipeline.Workspace)/drop/project
