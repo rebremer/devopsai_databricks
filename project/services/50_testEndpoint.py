@@ -8,13 +8,14 @@ import urllib.request
 from azureml.core.authentication import AzureCliAuthentication
 from azureml.core import Workspace, Run
 from azureml.core.webservice import Webservice
+import sys
 
 # Define Vars < Change the vars>. 
 # In a production situation, don't put secrets in source code, but as secret variables, 
 # see https://docs.microsoft.com/en-us/azure/devops/pipelines/process/variables?view=azure-devops&tabs=yaml%2Cbatch#secret-variables
-workspace="<Name of your workspace>"
-subscription_id="<Subscription id>"
-resource_grp="<Name of your resource group where aml service is created>"
+workspace=sys.argv[1]
+subscription_id=sys.argv[2]
+resource_grp=sys.argv[3]
 
 service_name = "databricksmodel"
 

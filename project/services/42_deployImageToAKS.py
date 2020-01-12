@@ -5,6 +5,7 @@ from azureml.core.authentication import AzureCliAuthentication
 from azureml.core.image import ContainerImage, Image
 from azureml.core.webservice import Webservice, AksWebservice
 from azureml.core.compute import AksCompute
+import sys
 
 # display the core SDK version number
 print("Azure ML SDK Version: ", azureml.core.VERSION)
@@ -12,14 +13,14 @@ print("Azure ML SDK Version: ", azureml.core.VERSION)
 # Define Vars < Change the vars>. 
 # In a production situation, don't put secrets in source code, but as secret variables, 
 # see https://docs.microsoft.com/en-us/azure/devops/pipelines/process/variables?view=azure-devops&tabs=yaml%2Cbatch#secret-variables
-workspace="<Name of your workspace>"
-subscription_id="<Subscription id>"
-resource_grp="<Name of your resource group where aml service is created>"
+workspace=sys.argv[1]
+subscription_id=sys.argv[2]
+resource_grp=sys.argv[3]
 
 model_name = "databricksmodel.mml" # in case you want to change the name, keep the .mml extension
 service_name = "databricksmodel"
 
-aks_name = sys.argv[1]
+aks_name = sys.argv[4]
 
 # Get the latest evaluation result
 try:

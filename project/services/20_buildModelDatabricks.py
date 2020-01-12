@@ -11,18 +11,19 @@ from azureml.core.authentication import AzureCliAuthentication
 from azureml.core.run import Run
 from azureml.core.experiment import Experiment
 from azureml.core.model import Model
+import sys
 
 def trigger_training_job():
 
     # Define Vars < Change the vars>. 
     # In a production situation, don't put secrets in source code, but as secret variables, 
     # see https://docs.microsoft.com/en-us/azure/devops/pipelines/process/variables?view=azure-devops&tabs=yaml%2Cbatch#secret-variables
-    workspace="<Name of your workspace>"
-    subscription_id="<Subscription id>"
-    resource_grp="<Name of your resource group where aml service is created>"
+    workspace=sys.argv[1]
+    subscription_id=sys.argv[2]
+    resource_grp=sys.argv[3]
 
-    domain = "westeurope.azuredatabricks.net" # change location in case databricks instance is not in westeurope
-    dbr_pat_token_raw = "<<your Databricks Personal Access Token>>"
+    domain = sys.argv[4]
+    dbr_pat_token_raw = sys.argv[5]
 
     DBR_PAT_TOKEN = bytes(dbr_pat_token_raw, encoding='utf-8') # adding b'
     notebookRemote = "/3_IncomeNotebookDevops"
