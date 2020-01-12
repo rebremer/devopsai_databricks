@@ -157,5 +157,5 @@ stages:
             inputs:
               azureSubscription: $(azureServiceConnectionId)
               scriptLocation: inlineScript
-              inlineScript: 'python services/42_deployImageToAKS.py $(workspace) $(subscription_id) $(resource_grp)$(AKSName)'
+              inlineScript: 'python services/42_deployImageToAKS.py $(workspace) $(subscription_id) $(resource_grp) $(AKSName)'
               workingDirectory: $(Pipeline.Workspace)/drop/project
