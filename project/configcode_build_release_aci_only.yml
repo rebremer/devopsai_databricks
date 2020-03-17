@@ -130,34 +130,3 @@ stages:
               scriptLocation: inlineScript
               inlineScript: 'python services/50_testEndpoint.py $(workspace) $(subscription_id) $(resource_grp)'
               workingDirectory: $(Pipeline.Workspace)/drop/project
-- stage: DeployProd
-  displayName: 'Deploy Image to AKS'
-  dependsOn: DeployTest
-  condition: succeeded()
-  jobs:
-  - deployment: DeployProdAKS
-    pool:
-      vmImage: $(vmImageName)
-    environment: $(environmentNameProd)
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - task: UsePythonVersion@0
-            displayName: 'Select Python version'
-            inputs:
-              versionSpec: $(pythonVersion)
-            
-          - task: Bash@3
-            displayName: 'Install dependencies'
-            inputs:
-              targetType: 'filePath'
-              filePath: $(Pipeline.Workspace)/drop/setup/setup.sh     
-              
-          - task: AzureCLI@1
-            displayName: 'Deploy to AKS'
-            inputs:
-              azureSubscription: $(azureServiceConnectionId)
-              scriptLocation: inlineScript
-              inlineScript: 'python services/42_deployImageToAKS.py $(workspace) $(subscription_id) $(resource_grp) $(AKSName)'
-              workingDirectory: $(Pipeline.Workspace)/drop/project
