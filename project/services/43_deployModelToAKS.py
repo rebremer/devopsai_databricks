@@ -80,5 +80,5 @@ print(service.scoring_uri)
 aks_webservice = {}
 aks_webservice['aks_name'] = service.name
 aks_webservice['aks_url'] = service.scoring_uri
-with open('conf/aks_webservice.json', 'w') as outfile:
+with open('../conf/' + service_name + '.json', 'w') as outfile:
   json.dump(aks_webservice,outfile)
