@@ -17,7 +17,7 @@ workspace=sys.argv[1]
 subscription_id=sys.argv[2]
 resource_grp=sys.argv[3]
 
-service_name = "databricksmodel"
+service_name = sys.argv[4]
 
 print("Starting trigger engine")
 # Start creating 

@@ -1,9 +1,7 @@
 # Build/Release pipeline for DevOps for AI project
 # - In stage: Build, a docker image artifact is created containg a ML model built by using Databricks and Azure ML services
-# - In stage: DeployTest, a docker image is deployed to Azure Container Instance (ACI)
-# - In stage: DeployProd, a docker image is deployed to Azure Kubernetes Service (AKS)
-#   - In case no AKS is deployed, no worries, then only the build stage and deployTest are executed and the DeployProd stage just failes
-# https://docs.microsoft.com/azure/devops/pipelines/languages/python
+# - In stage: DeployTest, a docker image is deployed to Azure Kubernetes Service (AKS) for test dev purposes
+# - In stage: DeployProd, a docker image is deployed to Azure Kubernetes Service (AKS) for production
 
 trigger:
 - master
@@ -18,7 +16,10 @@ variables:
 
   # Fixed variables, no need to change
   # AKS name. In case you did not configure AKS, no worries, then docker images is just not deployed to AKS
-  AKSName: 'blog-devai-aks'
+  AKSNameTest: 'blog-devai-aks'  
+  test_service_name: 'dbrmodeltest'
+  AKSNameProd: 'blog-devai-aks'
+  prod_service_name: 'dbrmodelprod'
 
   # Azure Resource Manager connection created during pipeline creation
   azureServiceConnectionId: 'devopsaisec_service_connection'
@@ -30,7 +31,7 @@ variables:
   pythonVersion: '3.6'
 
   # Environment name test
-  environmentNameTest: 'ACI test'
+  environmentNameTest: 'AKS test'
 
   # Environment name production
   environmentNameProd: 'AKS production'
@@ -73,14 +74,6 @@ stages:
         inlineScript: 'python services/20_buildModelDatabricks.py $(workspace) $(subscription_id) $(resource_grp) $(domain) $(dbr_pat_token_raw)'
         workingDirectory: $(projectRoot)/project
       
-    - task: AzureCLI@1
-      displayName: 'Create image from model'
-      inputs:
-        azureSubscription: $(azureServiceConnectionId)
-        scriptLocation: inlineScript
-        inlineScript: 'python services/30_createImageFromModel.py $(workspace) $(subscription_id) $(resource_grp)'
-        workingDirectory: $(projectRoot)/project
-      
     - task: CopyFiles@2
       displayName: 'Copy Files to: $(Build.ArtifactStagingDirectory)'
       inputs:
@@ -92,11 +85,11 @@ stages:
       artifact: drop
 
 - stage: DeployTest
-  displayName: 'Deploy Image to ACI'
+  displayName: 'Deploy Image to test AKS'
   dependsOn: Build
   condition: succeeded()
   jobs:
-  - deployment: DeployTestACI
+  - deployment: DeployTestAKS
     pool:
       vmImage: $(vmImageName)
     environment: $(environmentNameTest)
@@ -116,22 +109,21 @@ stages:
               filePath: $(Pipeline.Workspace)/drop/setup/setup.sh     
               
           - task: AzureCLI@1
-            displayName: 'Deploy to ACI'
+            displayName: 'Deploy to AKS'
             inputs:
               azureSubscription: $(azureServiceConnectionId)
               scriptLocation: inlineScript
-              inlineScript: 'python services/40_deployImageToACI.py $(workspace) $(subscription_id) $(resource_grp)'
+              inlineScript: 'python services/43_deployModelToAKS.py $(workspace) $(subscription_id) $(resource_grp) $(AKSNameTest) $(test_service_name)'
               workingDirectory: $(Pipeline.Workspace)/drop/project
-              
           - task: AzureCLI@1
-            displayName: 'Test container running on ACI'
+            displayName: 'Test container running on AKS test'
             inputs:
               azureSubscription: $(azureServiceConnectionId)
               scriptLocation: inlineScript
-              inlineScript: 'python services/50_testEndpoint.py $(workspace) $(subscription_id) $(resource_grp)'
+              inlineScript: 'python services/50_testEndpoint.py $(workspace) $(subscription_id) $(resource_grp) $(test_service_name)'
               workingDirectory: $(Pipeline.Workspace)/drop/project
 - stage: DeployProd
-  displayName: 'Deploy Image to AKS'
+  displayName: 'Deploy Image to AKS prod'
   dependsOn: DeployTest
   condition: succeeded()
   jobs:
@@ -155,9 +147,16 @@ stages:
               filePath: $(Pipeline.Workspace)/drop/setup/setup.sh     
               
           - task: AzureCLI@1
-            displayName: 'Deploy to AKS'
+            displayName: 'Deploy to AKS prod'
             inputs:
               azureSubscription: $(azureServiceConnectionId)
               scriptLocation: inlineScript
-              inlineScript: 'python services/42_deployImageToAKS.py $(workspace) $(subscription_id) $(resource_grp) $(AKSName)'
+              inlineScript: 'python services/43_deployModelToAKS.py $(workspace) $(subscription_id) $(resource_grp) $(AKSNameProd) $(prod_service_name)'
+              workingDirectory: $(Pipeline.Workspace)/drop/project
+          - task: AzureCLI@1
+            displayName: 'Test container running on AKS prod'
+            inputs:
+              azureSubscription: $(azureServiceConnectionId)
+              scriptLocation: inlineScript
+              inlineScript: 'python services/50_testEndpoint.py $(workspace) $(subscription_id) $(resource_grp) $(prod_service_name)'
               workingDirectory: $(Pipeline.Workspace)/drop/project

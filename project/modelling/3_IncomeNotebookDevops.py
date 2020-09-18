@@ -30,7 +30,7 @@ import time
 import json
 
 from pyspark.ml import Pipeline, PipelineModel
-from pyspark.ml.feature import OneHotEncoder, OneHotEncoderEstimator, StringIndexer, VectorAssembler
+from pyspark.ml.feature import OneHotEncoder, StringIndexer, VectorAssembler
 from pyspark.ml.classification import LogisticRegression, DecisionTreeClassifier
 from pyspark.ml.evaluation import BinaryClassificationEvaluator
 from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
@@ -52,7 +52,7 @@ else:
 # COMMAND ----------
 
 # Create a Spark dataframe out of the csv file.
-data_all = sqlContext.read.format('csv').options(header='true', inferSchema='true', ignoreLeadingWhiteSpace='true', ignoreTrailingWhiteSpace='true').load(datafile)
+data_all = sqlContext.read.format('csv').options(header='true', inferSchema='true', ignoreLeadingWhiteSpace='true', ignoreTrailingWhiteSpace='true').load("dbfs:/AdultCensusIncome.csv")
 print("({}, {})".format(data_all.count(), len(data_all.columns)))
 
 #renaming columns, all columns that contain a - will be replaced with an "_"
@@ -155,7 +155,10 @@ model_pipeline.write().overwrite().save(par_model_name)
 # upload the serialized model into run history record
 mdl, ext = par_model_name.split(".")
 model_zip = mdl + ".zip"
-shutil.make_archive('/dbfs/'+ mdl, 'zip', model_dbfs)
+#shutil.make_archive('dbfs:/'+ mdl, 'zip', 'dbfs:/' + par_model_name)
+#shutil.make_archive('dbfs:/'+ mdl, 'zip', model_dbfs)
+shutil.make_archive(mdl, 'zip', '/dbfs/' + par_model_name)
+shutil.copyfile('/databricks/driver/' + model_zip, '/dbfs/' + model_zip)
 
 # write model metrics to dbfs
 # Step 6. Finally, writing the registered model details to conf/model.json

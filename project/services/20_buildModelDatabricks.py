@@ -56,7 +56,7 @@ def trigger_training_job():
         json={
                 "name": "Run AzureDevopsNotebook Job",
                 "new_cluster": {
-                    "spark_version": "4.0.x-scala2.11",
+                    "spark_version": "6.6.x-scala2.11",
                     "node_type_id": "Standard_D3_v2",
                     "spark_env_vars": {
                         'PYSPARK_PYTHON': '/databricks/python3/bin/python3',
@@ -66,13 +66,6 @@ def trigger_training_job():
                         "max_workers": 2
                     }
                 },
-                "libraries": [
-                   {
-                     "pypi": {
-                        "package": "azureml-sdk[databricks]"
-                     }
-                  }
-                ],
                 "notebook_task": {
                 "notebook_path": notebookRemote,
                 "base_parameters": [{"key":"subscription_id", "value":subscription_id}, {"key":"resource_group", "value":resource_grp}, {"key":"workspace_name","value":workspace},
@@ -195,11 +188,11 @@ def trigger_training_job():
     run_id = run.id
     print ("run id:", run_id)
 
-    # unzip file to model_name_run
-    shutil.unpack_archive(model_zip_run, model_name_run)
-
+    # Register the model as zip file. The model will be unzipped in the init of the score.py. 
+    # In case no zip file is used and the entire directory is uploaded, this results that more than 125 layers
+    # are created in the docker image creation. This results docker max depth exceeded and the docker build fails
     model = Model.register(
-        model_path=model_name_run,  # this points to a local file
+        model_path=model_zip_run,  # this points to a local file
         model_name=model_name,  # this is the name the model is registered as
         tags={"area": "spar", "type": "regression", "run_id": run_id},
         description="Medium blog test model",

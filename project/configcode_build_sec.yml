@@ -1,3 +1,6 @@
+#
+# Obsolete, deployment to ACI fails. Use configcode_build_release.yml to deploy to AKS
+#
 resources:
 - repo: self
 queue:

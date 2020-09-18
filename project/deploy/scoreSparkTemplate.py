@@ -6,6 +6,9 @@ from azureml.core.model import Model
 from pyspark.ml import PipelineModel
 from azureml.monitoring import ModelDataCollector
 
+import shutil
+import os
+
 def init():
     try:
         # One-time initialization of PySpark and predictive model
@@ -15,12 +18,21 @@ def init():
 
         global inputs_dc, prediction_dc
         model_name = "{model_name}"  # interpolated
+        model_path = Model.get_model_path(model_name)
+
+        # hack to such that model_path can work with zip file. Reason is the image can only be created using zip file. 
+        # If no zip file was used, then every file in the unzipped file would create a layer and thus exceeding max depth layers (125) of docker
+        mdl, ext = model_path.rsplit(".", 1)
+        os.mkdir(mdl + ".tmp")
+        shutil.unpack_archive(model_path, mdl + ".tmp")
+        os.remove(model_path)
+        os.rename(mdl + ".tmp", model_path)
+
         inputs_dc = ModelDataCollector(model_name, identifier="inputs",
                                        feature_names=["json_input_data"])
         prediction_dc = ModelDataCollector(model_name, identifier="predictions", feature_names=["predictions"])
 
         spark = pyspark.sql.SparkSession.builder.appName("AML Production Model").getOrCreate()
-        model_path = Model.get_model_path(model_name)
         trainedModel = PipelineModel.load(model_path)
     except Exception as e:
         trainedModel = e

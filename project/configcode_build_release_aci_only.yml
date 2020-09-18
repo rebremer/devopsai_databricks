@@ -1,3 +1,6 @@
+#
+# Obsolete, deployment to ACI fails. Use cnfigcode_build_release.yml to deploy to AKS test and AKS prod
+#
 # Build/Release pipeline for DevOps for AI project
 # - In stage: Build, a docker image artifact is created containg a ML model built by using Databricks and Azure ML services
 # - In stage: DeployTest, a docker image is deployed to Azure Container Instance (ACI)
