@@ -58,7 +58,7 @@ else:
 # COMMAND ----------
 
 # Create a Spark dataframe out of the csv file.
-data_all = sqlContext.read.format('csv').options(header='true', inferSchema='true', ignoreLeadingWhiteSpace='true', ignoreTrailingWhiteSpace='true').load(datafile)
+data_all = sqlContext.read.format('csv').options(header='true', inferSchema='true', ignoreLeadingWhiteSpace='true', ignoreTrailingWhiteSpace='true').load("/" + datafile)
 print("({}, {})".format(data_all.count(), len(data_all.columns)))
 
 #renaming columns, all columns that contain a - will be replaced with an "_"
@@ -143,7 +143,7 @@ print("Area Under PR: {}".format(au_prc))
 # COMMAND ----------
 
 from pyspark.ml import Pipeline
-from pyspark.ml.feature import OneHotEncoderEstimator, StringIndexer, VectorAssembler
+from pyspark.ml.feature import OneHotEncoder, StringIndexer, VectorAssembler
 categoricalColumns = ["workclass", "education", "marital_status", "occupation", "relationship", "race", "sex", "native_country"]
 stages = [] # stages in our Pipeline
 for categoricalCol in categoricalColumns:
@@ -151,7 +151,7 @@ for categoricalCol in categoricalColumns:
     stringIndexer = StringIndexer(inputCol=categoricalCol, outputCol=categoricalCol + "Index")
     # Use OneHotEncoder to convert categorical variables into binary SparseVectors
     # encoder = OneHotEncoderEstimator(inputCol=categoricalCol + "Index", outputCol=categoricalCol + "classVec")
-    encoder = OneHotEncoderEstimator(inputCols=[stringIndexer.getOutputCol()], outputCols=[categoricalCol + "classVec"])
+    encoder = OneHotEncoder(inputCols=[stringIndexer.getOutputCol()], outputCols=[categoricalCol + "classVec"])
     # Add stages.  These are not run here, but will run all at once later on.
     stages += [stringIndexer, encoder]
     
