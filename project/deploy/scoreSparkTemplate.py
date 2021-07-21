@@ -28,9 +28,9 @@ def init():
         os.remove(model_path)
         os.rename(mdl + ".tmp", model_path)
 
-        inputs_dc = ModelDataCollector(model_name, identifier="inputs",
+        inputs_dc = ModelDataCollector(model_name, designation="inputs",
                                        feature_names=["json_input_data"])
-        prediction_dc = ModelDataCollector(model_name, identifier="predictions", feature_names=["predictions"])
+        prediction_dc = ModelDataCollector(model_name, designation="predictions", feature_names=["predictions"])
 
         spark = pyspark.sql.SparkSession.builder.appName("AML Production Model").getOrCreate()
         trainedModel = PipelineModel.load(model_path)
