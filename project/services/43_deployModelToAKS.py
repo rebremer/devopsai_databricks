@@ -66,7 +66,19 @@ score = score.replace("{model_name}", model_name)
 with open("scoreSpark.py", "w") as fw:
     fw.write(score)
 
-inference_config = InferenceConfig(entry_script='scoreSpark.py', runtime='spark-py', conda_file='myenv.yml')
+#inference_config = InferenceConfig(entry_script='scoreSpark.py', runtime='spark-py', conda_file='myenv.yml')
+from azureml.core.environment import SparkPackage
+from azureml.core.conda_dependencies import CondaDependencies
+from azureml.core.environment import Environment
+myenv = Environment('my-pyspark-environment')
+myenv.docker.base_image = "mcr.microsoft.com/mmlspark/release:0.15"
+myenv.inferencing_stack_version = "latest"
+myenv.python.conda_dependencies = CondaDependencies.create(pip_packages=["azureml-core","azureml-defaults","azureml-telemetry","azureml-train-restclients-hyperdrive","azureml-train-core","azureml-monitoring","scikit-learn", "cryptography==3.3.2", "Werkzeug==0.16.1"], python_version="3.6.2")
+myenv.python.conda_dependencies.add_channel("conda-forge")
+myenv.spark.packages = [SparkPackage("com.microsoft.ml.spark", "mmlspark_2.11", "0.15"), SparkPackage("com.microsoft.azure", "azure-storage", "2.0.0"), SparkPackage("org.apache.hadoop", "hadoop-azure", "2.7.0")]
+myenv.spark.repositories = ["https://mmlspark.azureedge.net/maven"]
+inference_config = InferenceConfig(entry_script='scoreSpark.py', environment=myenv)
+
 deployment_config = AksWebservice.deploy_configuration(auth_enabled=False, collect_model_data=True, enable_app_insights=True, cpu_cores = 2, memory_gb = 2)
 aks_target = AksCompute(ws,aks_name)
 
